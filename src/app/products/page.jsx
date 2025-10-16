@@ -477,7 +477,6 @@ export default function ProductsPage() {
                       {pageCount}
                     </span>
                   </div>
-
                   <button
                     onClick={goNext}
                     disabled={
