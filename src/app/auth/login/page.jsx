@@ -28,27 +28,23 @@ export default function Login() {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!isValidEmail(email)) {
-      console.log("Validation failed: invalid email format");
       setTempStatus("invalid");
       return;
     }
     setLoading(true);
     setStatus("idle");
-    console.log("Submitting auth request with email:", email);
     try {
       const { data } = await axios.post(
         "https://api.bitechx.com/auth",
         { email },
         { headers: { "Content-Type": "application/json" }, timeout: 10000 }
       );
-      console.log("Auth response:", data);
       const token = data?.token || "";
       if (!token) throw new Error("Invalid response");
       localStorage.setItem("bitechx_token", token);
       setStatus("success");
       setTimeout(() => router.push("/products"), 500);
-    } catch (err) {
-      console.log("Auth error:", err?.response?.data || err?.message || err);
+    } catch {
       setTempStatus("error");
     } finally {
       setLoading(false);
@@ -63,14 +59,10 @@ export default function Login() {
       : "bg-verdant text-mist";
 
   return (
-    <main className="min-h-screen bg-ink text-mist grid place-items-center p-6">
+    <main className="min-h-screen bg-mist text-ink grid place-items-center p-6">
       <div className="w-full max-w-md">
-        <div className="relative rounded-3xl bg-mist text-ink shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-          <div
-            className="absolute inset-0 rounded-3xl ring-1 ring-ink/10 pointer-events-none"
-            aria-hidden="true"
-          />
-          <div className="p-8 relative z-10">
+        <div className="relative rounded-3xl bg-mist text-ink shadow-[0_10px_30px_rgba(0,0,0,0.08)] ring-1 ring-ink/10">
+          <div className="p-8">
             <div className="mb-6 flex items-center justify-between">
               <h1 className="text-2xl font-semibold tracking-tight">
                 Inventra
@@ -79,6 +71,7 @@ export default function Login() {
                 Secure Login
               </span>
             </div>
+
             <form onSubmit={onSubmit} className="space-y-5" noValidate>
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm">
@@ -94,7 +87,7 @@ export default function Login() {
                     inputMode="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-ink/10 bg-white/80 pl-10 pr-4 py-3 text-ink placeholder-ink/40 outline-none focus:ring-2 focus:ring-verdant/60"
+                    className="w-full rounded-xl border border-ink/15 bg-mist/80 pl-10 pr-4 py-3 text-ink placeholder-ink/40 outline-none focus:ring-2 focus:ring-verdant/60"
                     placeholder="you@example.com"
                     autoComplete="email"
                     required
@@ -131,7 +124,17 @@ export default function Login() {
               </button>
             </form>
           </div>
-        
+
+          <div className="rounded-b-3xl border-t border-ink/10 bg-mist/70 px-8 py-4 text-center text-sm">
+            By continuing you agree to our{" "}
+            <a href="#" className="text-verdant hover:underline">
+              Terms
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-verdant hover:underline">
+              Privacy
+            </a>
+          </div>
         </div>
       </div>
     </main>
