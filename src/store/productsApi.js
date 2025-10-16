@@ -1,12 +1,12 @@
 "use client";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { Api } from "../../Api";
 
-const API_BASE = "https://api.bitechx.com";
 
 export const productsApi = createApi({
   reducerPath: "productsApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE,
+    baseUrl: Api,
     prepareHeaders: (headers) => {
       const token =
         (typeof window !== "undefined" &&

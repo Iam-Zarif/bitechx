@@ -21,10 +21,12 @@ import {
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectToken, clearSession } from "@/store/sessionSlice";
+import { Api } from "../../../Api";
+import useTitle from "@/hooks/useTitle";
 
-const API_BASE = "https://api.bitechx.com";
 
 export default function ProductsPage() {
+  useTitle("Products - Inventra")
   const router = useRouter();
   const dispatch = useAppDispatch();
   const token = useAppSelector(selectToken);
@@ -61,7 +63,7 @@ export default function ProductsPage() {
 
   const ax = useMemo(() => {
     const instance = axios.create({
-      baseURL: API_BASE,
+      baseURL: Api,
       headers: { "Content-Type": "application/json" },
       timeout: 15000,
     });

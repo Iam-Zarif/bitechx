@@ -23,8 +23,11 @@ import {
   useGetCategoriesQuery,
   useCreateProductMutation,
 } from "@/store/productsApi";
+import useTitle from "@/hooks/useTitle";
 
 export default function CreateProductPage() {
+    useTitle("Create Product");
+
   const router = useRouter();
   const dispatch = useAppDispatch();
   const token = useAppSelector(selectToken);

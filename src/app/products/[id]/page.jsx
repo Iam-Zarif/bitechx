@@ -12,12 +12,14 @@ import {
   FiX,
   FiLoader,
 } from "react-icons/fi";
+import { Api } from "../../../../Api";
+import useTitle from "@/hooks/useTitle";
 
-const API_BASE = "https://api.bitechx.com";
 
 export default function ProductDetailsPage() {
   const router = useRouter();
   const { id: slug } = useParams(); // we treat [id] as slug
+  useTitle(` ${slug} `);
   const [token, setToken] = useState("");
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,7 +42,7 @@ export default function ProductDetailsPage() {
 
   const ax = useMemo(() => {
     const instance = axios.create({
-      baseURL: API_BASE,
+      baseURL: Api,
       headers: { "Content-Type": "application/json" },
       timeout: 15000,
     });

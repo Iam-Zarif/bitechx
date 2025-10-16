@@ -5,8 +5,10 @@ import { FiMail, FiCheck, FiAlertCircle } from "react-icons/fi";
 import { useAuthLoginMutation } from "@/store/productsApi";
 import { useAppDispatch } from "@/store/hooks";
 import { setSession } from "@/store/sessionSlice";
+import useTitle from "@/hooks/useTitle";
 
 export default function Home() {
+  useTitle("Login - Inventra")
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [authLogin, { isLoading }] = useAuthLoginMutation();

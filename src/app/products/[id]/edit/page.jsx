@@ -11,8 +11,8 @@ import {
 } from "react-icons/fi";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectToken, clearSession } from "@/store/sessionSlice";
+import { Api } from "../../../../../Api";
 
-const API_BASE = "https://api.bitechx.com";
 
 export default function EditProduct() {
   const router = useRouter();
@@ -43,7 +43,7 @@ export default function EditProduct() {
 
   const ax = useMemo(() => {
     const i = axios.create({
-      baseURL: API_BASE,
+      baseURL: Api,
       headers: { "Content-Type": "application/json" },
       timeout: 15000,
     });
