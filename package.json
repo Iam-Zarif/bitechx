@@ -1,6 +1,7 @@
 {
   "name": "bitechx",
   "version": "0.1.0",
+  "homepage": "https://bitechx-pied.vercel.app",
   "private": true,
   "scripts": {
     "dev": "next dev",
