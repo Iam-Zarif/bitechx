@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* your theme */
 @theme {
   --color-ink: #0D1821;
   --color-mist: #EFF1F3;

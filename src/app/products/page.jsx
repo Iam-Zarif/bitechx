@@ -1,5 +1,12 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import axios from "axios";
 import { useRouter } from "next/navigation";
 import {
   FiSearch,
@@ -14,23 +21,21 @@ import {
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectToken, clearSession } from "@/store/sessionSlice";
-import {
-  useGetCategoriesQuery,
-  useGetProductsQuery,
-  useSearchProductsQuery,
-  useDeleteProductMutation,
-} from "@/store/api";
+
+const API_BASE = "https://api.bitechx.com";
 
 export default function ProductsPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const token = useAppSelector(selectToken);
 
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [isLoading, setIsLoading] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [searchText, setSearchText] = useState("");
-  const [searchDebounced, setSearchDebounced] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(null);
@@ -54,10 +59,104 @@ export default function ProductsPage() {
     if (!token && !t) router.replace("/login");
   }, [token, router]);
 
+  const ax = useMemo(() => {
+    const instance = axios.create({
+      baseURL: API_BASE,
+      headers: { "Content-Type": "application/json" },
+      timeout: 15000,
+    });
+    instance.interceptors.request.use((cfg) => {
+      if (token) cfg.headers.Authorization = `Bearer ${token}`;
+      return cfg;
+    });
+    instance.interceptors.response.use(
+      (r) => r,
+      (e) => {
+        if (e?.response?.status === 401) {
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("bitechx_token");
+            localStorage.removeItem("bitechx_email");
+          }
+          dispatch(clearSession());
+          router.replace("/login");
+        }
+        return Promise.reject(e);
+      }
+    );
+    return instance;
+  }, [token, router, dispatch]);
+
+  const debounceRef = useRef(null);
+  const triggerFetch = useCallback((fn, delay = 350) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(fn, delay);
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await ax.get("/categories");
+      setCategories(res.data || []);
+    } catch {
+      setCategories([]);
+    }
+  }, [ax, token]);
+
   useEffect(() => {
-    const t = setTimeout(() => setSearchDebounced(searchText), 350);
-    return () => clearTimeout(t);
-  }, [searchText]);
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const fetchProducts = useCallback(async () => {
+    if (!token) return;
+    setIsLoading(true);
+    setErrorMessage("");
+    try {
+      if (searchText.trim().length >= 2) {
+        const q = encodeURIComponent(searchText.trim());
+        const res = await ax.get(`/products/search?searchedText=${q}`);
+        let list = res.data || [];
+        if (selectedCategoryId !== "all")
+          list = list.filter((p) => p?.category?.id === selectedCategoryId);
+        setProducts(list);
+        setTotal(list.length);
+        setPage(1);
+      } else {
+        const offset = (page - 1) * limit;
+        const res2 = await ax.get(
+          `/products?offset=${offset}&limit=${limit}${
+            selectedCategoryId !== "all"
+              ? `&categoryId=${selectedCategoryId}`
+              : ""
+          }`
+        );
+        const arr = res2.data || [];
+        setProducts(arr);
+        if (arr.length < limit && offset === 0) setTotal(arr.length);
+        else if (
+          offset === 0 &&
+          page === 1 &&
+          (arr.length === limit || arr.length === 0)
+        )
+          setTotal(50);
+      }
+    } catch {
+      setErrorMessage("Failed to load products. Please try again.");
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ax, token, searchText, page, limit, selectedCategoryId]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchProducts();
+    }, 350);
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    triggerFetch(fetchProducts);
+  }, [fetchProducts, triggerFetch]);
 
   useEffect(() => {
     function onDocClick(e) {
@@ -76,65 +175,15 @@ export default function ProductsPage() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  const categoryParam =
-    selectedCategoryId !== "all" ? selectedCategoryId : undefined;
-  const offset = (page - 1) * limit;
-  const searchActive = searchDebounced.trim().length >= 2;
-
-  const {
-    data: categories = [],
-    isFetching: catsLoading,
-    error: catsError,
-  } = useGetCategoriesQuery(undefined, { skip: !token });
-
-  const {
-    data: pageItems = [],
-    isFetching: listLoading,
-    error: listError,
-  } = useGetProductsQuery(
-    { offset, limit, categoryId: categoryParam },
-    { skip: !token || searchActive }
-  );
-
-  const {
-    data: searchItemsRaw = [],
-    isFetching: searchLoading,
-    error: searchError,
-  } = useSearchProductsQuery(
-    { searchedText: searchDebounced.trim() },
-    { skip: !token || !searchActive }
-  );
-
-  const searchItems = useMemo(() => {
-    if (!searchActive) return [];
-    if (categoryParam)
-      return (searchItemsRaw || []).filter(
-        (p) => p?.category?.id === categoryParam
-      );
-    return searchItemsRaw || [];
-  }, [searchActive, searchItemsRaw, categoryParam]);
-
-  const isLoading = listLoading || searchLoading || catsLoading;
-  useEffect(() => {
-    const err =
-      (listError && "Failed to load products.") ||
-      (searchError && "Failed to search products.") ||
-      (catsError && "Failed to load categories.") ||
-      "";
-    setErrorMessage(err);
-  }, [listError, searchError, catsError]);
-
-  const [deleteProduct] = useDeleteProductMutation();
-
   const handleConfirmDelete = (product) =>
     setConfirmDelete({ open: true, id: product.id, name: product.name });
 
   const handleDelete = async () => {
     if (!confirmDelete.id) return;
     setIsDeletingId(confirmDelete.id);
-    setErrorMessage("");
     try {
-      await deleteProduct(confirmDelete.id).unwrap();
+      await ax.delete(`/products/${confirmDelete.id}`);
+      setProducts((prev) => prev.filter((p) => p.id !== confirmDelete.id));
     } catch {
       setErrorMessage("Failed to delete product. Please try again.");
     } finally {
@@ -142,22 +191,6 @@ export default function ProductsPage() {
       setConfirmDelete({ open: false, id: null, name: "" });
     }
   };
-
-  const products = searchActive ? searchItems : pageItems;
-
-  useEffect(() => {
-    if (searchActive) {
-      setTotal(products.length);
-      setPage(1);
-      return;
-    }
-    if (!searchActive && Array.isArray(pageItems)) {
-      if (page === 1 && offset === 0) {
-        if (pageItems.length < limit) setTotal(pageItems.length);
-        else setTotal(50);
-      }
-    }
-  }, [searchActive, products, pageItems, page, offset, limit]);
 
   const pageCount = useMemo(
     () => (total ? Math.max(1, Math.ceil(total / limit)) : 1),
@@ -180,7 +213,7 @@ export default function ProductsPage() {
   };
 
   const goNext = () => {
-    if (!canNext || isLoading || searchActive) return;
+    if (!canNext || isLoading || searchText.trim().length >= 2) return;
     setPage((p) => p + 1);
     scrollToTop();
   };
@@ -190,41 +223,20 @@ export default function ProductsPage() {
       <div ref={topRef} />
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+          <div>
             <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
-            <Link
-              href="/products/create"
-              className="rounded-lg bg-verdant px-3 py-2 text-mist hover:bg-verdant/90"
-            >
-              Create
-            </Link>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative w-72">
-              <span className="pointer-events-none absolute inset-y-0 left-0 grid w-10 place-items-center">
-                <FiSearch className="text-ink" />
-              </span>
-              <input
-                type="search"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search by name..."
-                className="w-full rounded-xl border border-ink/15 bg-mist text-ink pl-10 pr-3 py-2 placeholder-ink/40 outline-none focus:ring-2 focus:ring-verdant/60"
-              />
-            </div>
-            <button
-              onClick={() => {
-                dispatch(clearSession());
-                if (typeof window !== "undefined") {
-                  localStorage.removeItem("bitechx_token");
-                  localStorage.removeItem("bitechx_email");
-                }
-                router.replace("/login");
-              }}
-              className="rounded-lg border border-ink/15 px-3 py-2 hover:bg-mist/80"
-            >
-              Logout
-            </button>
+          <div className="relative w-full sm:w-80">
+            <span className="pointer-events-none absolute inset-y-0 left-0 grid w-10 place-items-center">
+              <FiSearch className="text-ink" />
+            </span>
+            <input
+              type="search"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search by name..."
+              className="w-full rounded-xl border border-ink/15 bg-mist text-ink pl-10 pr-3 py-2 placeholder-ink/40 outline-none focus:ring-2 focus:ring-verdant/60"
+            />
           </div>
         </header>
 
@@ -468,9 +480,13 @@ export default function ProductsPage() {
 
                   <button
                     onClick={goNext}
-                    disabled={!canNext || isLoading || searchActive}
+                    disabled={
+                      !canNext || isLoading || searchText.trim().length >= 2
+                    }
                     title={
-                      searchActive ? "Pagination disabled during search" : ""
+                      searchText.trim().length >= 2
+                        ? "Pagination disabled during search"
+                        : ""
                     }
                     className="inline-flex items-center gap-2 rounded-full bg-verdant px-4 py-2 text-mist hover:bg-verdant/90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -501,7 +517,7 @@ export default function ProductsPage() {
               <div>
                 <h4 className="font-semibold">Delete product?</h4>
                 <p className="mt-1 text-sm text-ink/70">
-                  This will delete{" "}
+                  This will simulate deletion of{" "}
                   <span className="font-medium">{confirmDelete.name}</span>.
                   Continue?
                 </p>
