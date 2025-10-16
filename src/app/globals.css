@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* your theme */
 @theme {
   --color-ink: #0D1821;
   --color-mist: #EFF1F3;
@@ -12,4 +13,36 @@
   --color-danger: var(--color-rust);
   --color-bg: var(--color-mist);
   --color-fg: var(--color-ink);
+
+  --color-sun: #4E6E5D;
+}
+
+* {
+  scrollbar-width: thin; 
+  scrollbar-color: var(--color-sun) transparent; 
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-sun);
+  border-radius: 9999px;
+  border: 2px solid transparent;   
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  filter: brightness(0.95);
+}
+
+input, textarea, [contenteditable="true"] {
+  caret-color: var(--color-sun);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-sun) 35%, transparent);
 }

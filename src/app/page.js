@@ -1,103 +1,136 @@
-import Image from "next/image";
+"use client";
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FiMail, FiCheck, FiAlertCircle } from "react-icons/fi";
+import { useAuthLoginMutation } from "@/store/productsApi";
+import { useAppDispatch } from "@/store/hooks";
+import { setSession } from "@/store/sessionSlice";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const [authLogin, { isLoading }] = useAuthLoginMutation();
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle");
+  const timerRef = useRef(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const setTempStatus = (s) => {
+    setStatus(s);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setStatus("idle"), 4000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!isValidEmail(email)) {
+      setTempStatus("invalid");
+      return;
+    }
+    setStatus("idle");
+    try {
+      const { token } = await authLogin({ email }).unwrap();
+      if (!token) throw new Error("No token");
+      dispatch(setSession({ token, email }));
+      setStatus("success");
+      setTimeout(() => router.push("/products"), 500);
+    } catch {
+      setTempStatus("error");
+    }
+  };
+
+  const btnColor =
+    status === "success"
+      ? "bg-verdant text-mist"
+      : status === "error" || status === "invalid"
+      ? "bg-rust text-mist"
+      : "bg-verdant text-mist";
+
+  return (
+    <main className="min-h-screen bg-mist text-ink grid place-items-center p-6">
+      <div className="w-full max-w-md">
+        <div className="relative rounded-3xl bg-mist text-ink shadow-[0_10px_30px_rgba(0,0,0,0.08)] ring-1 ring-ink/10">
+          <div className="p-8">
+            <div className="mb-6 flex items-center justify-between">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Inventra
+              </h1>
+              <span className="inline-flex items-center gap-2 rounded-full bg-verdant/10 px-3 py-1 text-xs text-verdant">
+                Secure Login
+              </span>
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-5" noValidate>
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-sm">
+                  Email
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-0 grid w-10 place-items-center text-ink/50">
+                    <FiMail />
+                  </span>
+                  <input
+                    id="email"
+                    type="email"
+                    inputMode="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-xl border border-ink/15 bg-mist/80 pl-10 pr-4 py-3 text-ink placeholder-ink/40 outline-none focus:ring-2 focus:ring-verdant/60"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 transition active:scale-[.98] hover:bg-verdant/90 disabled:opacity-60 ${btnColor}`}
+              >
+                {isLoading ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-mist border-b-transparent" />
+                ) : status === "success" ? (
+                  <>
+                    <FiCheck className="h-5 w-5" />
+                    <span>Success</span>
+                  </>
+                ) : status === "error" ? (
+                  <>
+                    <FiAlertCircle className="h-5 w-5" />
+                    <span>Authentication failed</span>
+                  </>
+                ) : status === "invalid" ? (
+                  <>
+                    <FiAlertCircle className="h-5 w-5" />
+                    <span>Invalid email format</span>
+                  </>
+                ) : (
+                  <span>Login</span>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <div className="rounded-b-3xl border-t border-ink/10 bg-mist/70 px-8 py-4 text-center text-sm">
+            By continuing you agree to our{" "}
+            <a href="#" className="text-verdant hover:underline">
+              Terms
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-verdant hover:underline">
+              Privacy
+            </a>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }

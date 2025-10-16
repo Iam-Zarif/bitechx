@@ -9,13 +9,17 @@ import {
   FiLoader,
   FiAlertTriangle,
 } from "react-icons/fi";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectToken, clearSession } from "@/store/sessionSlice";
 
 const API_BASE = "https://api.bitechx.com";
 
 export default function EditProduct() {
   const router = useRouter();
-  const { id:slug } = useParams();
-  const [token, setToken] = useState("");
+  const { id: slug } = useParams();
+  const dispatch = useAppDispatch();
+  const token = useAppSelector(selectToken);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -30,13 +34,12 @@ export default function EditProduct() {
   const categoryRef = useRef(null);
 
   useEffect(() => {
-    const t = localStorage.getItem("bitechx_token") || "";
-    if (!t) {
-      router.replace("/login");
-      return;
-    }
-    setToken(t);
-  }, [router]);
+    const t =
+      typeof window !== "undefined"
+        ? localStorage.getItem("bitechx_token")
+        : "";
+    if (!token && !t) router.replace("/login");
+  }, [token, router]);
 
   const ax = useMemo(() => {
     const i = axios.create({
@@ -52,14 +55,18 @@ export default function EditProduct() {
       (r) => r,
       (e) => {
         if (e?.response?.status === 401) {
-          localStorage.removeItem("bitechx_token");
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("bitechx_token");
+            localStorage.removeItem("bitechx_email");
+          }
+          dispatch(clearSession());
           router.replace("/login");
         }
         return Promise.reject(e);
       }
     );
     return i;
-  }, [token, router]);
+  }, [token, router, dispatch]);
 
   useEffect(() => {
     function onDoc(e) {
@@ -80,7 +87,7 @@ export default function EditProduct() {
       setErrorMessage("");
       try {
         const [{ data: prod }, { data: cats }] = await Promise.all([
-          ax.get(`/products/${slug}`), // GET by slug
+          ax.get(`/products/${slug}`),
           ax.get("/categories"),
         ]);
 
@@ -93,7 +100,7 @@ export default function EditProduct() {
         setImageUrl(prod.images?.[0] || "");
         setCategoryId(prod?.category?.id || "");
         setCategories(cats || []);
-      } catch (e) {
+      } catch {
         if (!mounted) return;
         setErrorMessage("Failed to load product for editing.");
       } finally {
@@ -140,7 +147,7 @@ export default function EditProduct() {
         categoryId,
       });
       router.push(`/products`);
-    } catch (e) {
+    } catch {
       setErrorMessage("Failed to save changes. Please try again.");
     } finally {
       setSaving(false);
@@ -159,7 +166,7 @@ export default function EditProduct() {
   }
 
   return (
-    <main className="min-h-screen bg-mist text-ink p-6">
+    <main className="min-h-screen  bg-mist text-ink p-6">
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <div className="flex items-center justify-between">
           <button
@@ -173,7 +180,6 @@ export default function EditProduct() {
           <h1 className="text-xl font-semibold tracking-tight">Edit product</h1>
         </div>
 
-        {/* Error banner */}
         {errorMessage && (
           <div className="flex items-center gap-2 rounded-xl bg-rust/10 px-3 py-3 text-rust">
             <FiAlertTriangle />
@@ -181,12 +187,10 @@ export default function EditProduct() {
           </div>
         )}
 
-        {/* Form */}
         <form
           onSubmit={onSave}
           className="space-y-5 rounded-2xl bg-mist p-5 ring-1 ring-ink/10"
         >
-          {/* Name */}
           <div className="space-y-2">
             <label className="block text-sm">Name</label>
             <input
@@ -197,7 +201,6 @@ export default function EditProduct() {
             />
           </div>
 
-          {/* Description */}
           <div className="space-y-2">
             <label className="block text-sm">Description</label>
             <textarea
@@ -209,7 +212,6 @@ export default function EditProduct() {
             />
           </div>
 
-          {/* Price + Category */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="block text-sm">Price</label>
@@ -299,11 +301,7 @@ export default function EditProduct() {
             />
             {imageUrl && (
               <div className="mt-2 overflow-hidden rounded-lg ring-1 ring-ink/10 bg-ink/5">
-                <img
-                  src={imageUrl}
-                  alt="Preview"
-                  className=" w-full object-contain"
-                />
+                <img src={imageUrl} alt="Preview" className=" " />
               </div>
             )}
           </div>

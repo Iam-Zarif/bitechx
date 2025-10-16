@@ -19,12 +19,16 @@ import {
   FiLoader,
 } from "react-icons/fi";
 import Link from "next/link";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectToken, clearSession } from "@/store/sessionSlice";
 
 const API_BASE = "https://api.bitechx.com";
 
 export default function ProductsPage() {
   const router = useRouter();
-  const [token, setToken] = useState("");
+  const dispatch = useAppDispatch();
+  const token = useAppSelector(selectToken);
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
@@ -45,15 +49,15 @@ export default function ProductsPage() {
   const pageSizeDropdownRef = useRef(null);
   const categoryDropdownRef = useRef(null);
   const pageSizeOptions = [5, 10, 15, 20];
+  const topRef = useRef(null);
 
   useEffect(() => {
-    const t = localStorage.getItem("bitechx_token") || "";
-    if (!t) {
-      router.replace("/login");
-      return;
-    }
-    setToken(t);
-  }, [router]);
+    const t =
+      typeof window !== "undefined"
+        ? localStorage.getItem("bitechx_token")
+        : "";
+    if (!token && !t) router.replace("/login");
+  }, [token, router]);
 
   const ax = useMemo(() => {
     const instance = axios.create({
@@ -69,14 +73,18 @@ export default function ProductsPage() {
       (r) => r,
       (e) => {
         if (e?.response?.status === 401) {
-          localStorage.removeItem("bitechx_token");
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("bitechx_token");
+            localStorage.removeItem("bitechx_email");
+          }
+          dispatch(clearSession());
           router.replace("/login");
         }
         return Promise.reject(e);
       }
     );
     return instance;
-  }, [token, router]);
+  }, [token, router, dispatch]);
 
   const debounceRef = useRef(null);
   const triggerFetch = useCallback((fn, delay = 350) => {
@@ -191,15 +199,32 @@ export default function ProductsPage() {
   const canPrev = page > 1;
   const canNext = page < pageCount;
 
+  const scrollToTop = () => {
+    if (topRef.current)
+      topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    else if (typeof window !== "undefined")
+      window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const goPrev = () => {
+    if (!canPrev || isLoading) return;
+    setPage((p) => p - 1);
+    scrollToTop();
+  };
+
+  const goNext = () => {
+    if (!canNext || isLoading || searchText.trim().length >= 2) return;
+    setPage((p) => p + 1);
+    scrollToTop();
+  };
+
   return (
     <main className="min-h-screen bg-mist text-ink p-6">
+      <div ref={topRef} />
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
-            <p className="text-sm text-ink/60">
-              Browse, search, and manage products.
-            </p>
           </div>
           <div className="relative w-full sm:w-80">
             <span className="pointer-events-none absolute inset-y-0 left-0 grid w-10 place-items-center">
@@ -216,7 +241,7 @@ export default function ProductsPage() {
         </header>
 
         <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex w-full items-center justify-between gap-4">
             <div ref={categoryDropdownRef} className="relative">
               <button
                 type="button"
@@ -261,6 +286,7 @@ export default function ProductsPage() {
                           setSelectedCategoryId("all");
                           setPage(1);
                           setIsCategoryOpen(false);
+                          scrollToTop();
                         }}
                       >
                         All categories
@@ -283,6 +309,7 @@ export default function ProductsPage() {
                               setSelectedCategoryId(c.id);
                               setPage(1);
                               setIsCategoryOpen(false);
+                              scrollToTop();
                             }}
                           >
                             {c.name}
@@ -339,6 +366,7 @@ export default function ProductsPage() {
                               setLimit(n);
                               setPage(1);
                               setIsPageSizeOpen(false);
+                              scrollToTop();
                             }}
                           >
                             {n} per page
@@ -350,32 +378,6 @@ export default function ProductsPage() {
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => canPrev && setPage((p) => p - 1)}
-              disabled={!canPrev || isLoading}
-              className="inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-mist text-ink px-3 py-2 cursor-pointer hover:bg-mist/80 disabled:opacity-50"
-            >
-              <FiChevronLeft /> Prev
-            </button>
-            <span className="text-sm text-ink/60">
-              Page <span className="font-medium text-ink">{page}</span> of{" "}
-              <span className="font-medium text-ink">{pageCount}</span>
-            </span>
-            <button
-              onClick={() => canNext && setPage((p) => p + 1)}
-              disabled={!canNext || isLoading || searchText.trim().length >= 2}
-              className="inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-mist text-ink px-3 py-2 cursor-pointer hover:bg-mist/80 disabled:opacity-50"
-              title={
-                searchText.trim().length >= 2
-                  ? "Pagination disabled during search"
-                  : ""
-              }
-            >
-              Next <FiChevronRight />
-            </button>
           </div>
         </section>
 
@@ -401,57 +403,99 @@ export default function ProductsPage() {
           )}
 
           {!isLoading && !errorMessage && products.length > 0 && (
-            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((p) => (
-                <li
-                  key={p.id}
-                  className="group relative overflow-hidden rounded-xl bg-mist text-ink ring-1 ring-ink/10 shadow"
-                >
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-ink/5">
-                    <img
-                      src={
-                        p.images?.[0] ||
-                        "https://via.placeholder.com/640x480?text=No+Image"
-                      }
-                      alt={p.name}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="line-clamp-1 font-semibold">{p.name}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-ink/70">
-                      {p.description || "No description"}
-                    </p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-verdant font-semibold">
-                        ${p.price}
-                      </span>
-                      <span className="text-xs text-ink/60">
-                        {p?.category?.name || "—"}
-                      </span>
+            <>
+              <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {products.map((p) => (
+                  <li
+                    key={p.id}
+                    className="group relative overflow-hidden rounded-xl bg-mist text-ink ring-1 ring-ink/10 shadow flex flex-col"
+                  >
+                    <div className="aspect-[4/3] w-full overflow-hidden bg-ink/5">
+                      <img
+                        src={
+                          p.images?.[0] ||
+                          "https://via.placeholder.com/640x480?text=No+Image"
+                        }
+                        alt={p.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
                     </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <Link
-                        href={`/products/${p.slug}`}
-                        className="cursor-pointer rounded-lg bg-verdant px-3 py-2 text-mist hover:bg-verdant/90"
-                      >
-                        Details
-                      </Link>
-                      <button
-                        onClick={() => handleConfirmDelete(p)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-rust px-3 py-2 text-mist hover:bg-rust/90 cursor-pointer disabled:opacity-60"
-                        disabled={isDeletingId === p.id}
-                        title="Delete product"
-                      >
-                        <FiTrash2 />
-                        {isDeletingId === p.id ? "Deleting…" : "Delete"}
-                      </button>
+                    <div className="p-4 flex flex-col grow">
+                      <h3 className="line-clamp-1 font-semibold">{p.name}</h3>
+                      <p className="mt-1 line-clamp-2 text-sm text-ink/70">
+                        {p.description || "No description"}
+                      </p>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-verdant font-semibold">
+                          ${p.price}
+                        </span>
+                        <span className="text-xs text-ink/60">
+                          {p?.category?.name || "—"}
+                        </span>
+                      </div>
+                      <div className="mt-auto pt-4 flex items-center justify-between">
+                        <Link
+                          href={`/products/${p.slug}`}
+                          className="cursor-pointer rounded-lg bg-verdant px-3 py-2 text-mist hover:bg-verdant/90"
+                        >
+                          Details
+                        </Link>
+                        <button
+                          onClick={() => handleConfirmDelete(p)}
+                          className="inline-flex items-center gap-2 rounded-lg bg-rust px-3 py-2 text-mist hover:bg-rust/90 cursor-pointer disabled:opacity-60"
+                          disabled={isDeletingId === p.id}
+                          title="Delete product"
+                        >
+                          <FiTrash2 />
+                          {isDeletingId === p.id ? "Deleting…" : "Delete"}
+                        </button>
+                      </div>
                     </div>
+                  </li>
+                ))}
+              </ul>
+
+              <nav className="mt-6 w-full rounded-full border border-ink/10 bg-mist shadow-[0_6px_18px_rgba(0,0,0,0.06)] px-2 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    onClick={goPrev}
+                    disabled={!canPrev || isLoading}
+                    className="inline-flex items-center gap-2 rounded-full bg-verdant px-4 py-2 text-mist hover:bg-verdant/90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FiChevronLeft className="shrink-0" />
+                    Prev
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-ink/60">Page</span>
+                    <span className="inline-flex items-center rounded-full border border-ink/15 bg-mist/80 px-3 py-1 text-sm font-medium">
+                      {page}
+                    </span>
+                    <span className="text-sm text-ink/60">of</span>
+                    <span className="inline-flex items-center rounded-full border border-ink/15 bg-mist/80 px-3 py-1 text-sm font-medium">
+                      {pageCount}
+                    </span>
                   </div>
-                </li>
-              ))}
-            </ul>
+
+                  <button
+                    onClick={goNext}
+                    disabled={
+                      !canNext || isLoading || searchText.trim().length >= 2
+                    }
+                    title={
+                      searchText.trim().length >= 2
+                        ? "Pagination disabled during search"
+                        : ""
+                    }
+                    className="inline-flex items-center gap-2 rounded-full bg-verdant px-4 py-2 text-mist hover:bg-verdant/90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <FiChevronRight className="shrink-0" />
+                  </button>
+                </div>
+              </nav>
+            </>
           )}
         </section>
       </div>

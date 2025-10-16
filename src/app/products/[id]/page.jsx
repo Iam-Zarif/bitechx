@@ -89,7 +89,6 @@ export default function ProductDetailsPage() {
     setIsDeleting(true);
     try {
       await ax.delete(`/products/${product.id}`);
-      // After simulated delete, go back to list
       router.replace("/products");
     } catch {
       setErrorMessage("Failed to delete product. Please try again.");
@@ -100,9 +99,8 @@ export default function ProductDetailsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-mist text-ink p-6">
+    <main className="min-h-screen bg-mist  text-ink p-6">
       <div className="mx-auto w-full max-w-5xl space-y-6">
-        {/* Top bar */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push("/products")}
