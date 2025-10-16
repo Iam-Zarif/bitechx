@@ -464,7 +464,7 @@ export default function ProductsPage() {
                     className="inline-flex items-center gap-2 rounded-full bg-verdant px-4 py-2 text-mist hover:bg-verdant/90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FiChevronLeft className="shrink-0" />
-                    Prev
+                    
                   </button>
 
                   <div className="flex items-center gap-2">
@@ -490,7 +490,7 @@ export default function ProductsPage() {
                     }
                     className="inline-flex items-center gap-2 rounded-full bg-verdant px-4 py-2 text-mist hover:bg-verdant/90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    
                     <FiChevronRight className="shrink-0" />
                   </button>
                 </div>
