@@ -332,6 +332,7 @@ export default function CreateProductPage() {
                 </button>
               </div>
 
+
               {images.length > 0 && (
                 <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {images.map((url) => {
