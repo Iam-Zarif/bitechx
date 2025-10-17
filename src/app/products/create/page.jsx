@@ -325,7 +325,7 @@ export default function CreateProductPage() {
                 <button
                   type="button"
                   onClick={addImage}
-                  className="inline-flex lg:mt-0 mt-4 items-center gap-2 rounded-xl bg-verdant px-4 py-3 text-mist hover:bg-verdant/90"
+                  className="inline-flex  mt-4 items-center gap-2 rounded-xl bg-verdant px-4 py-3 text-mist hover:bg-verdant/90"
                 >
                   <FiPlus />
                   Add
