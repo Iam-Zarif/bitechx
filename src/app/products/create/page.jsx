@@ -292,7 +292,7 @@ export default function CreateProductPage() {
 
             <div>
               <label className="mb-1 block text-sm">Images</label>
-              <div className="flex gap-2">
+              <div className="flex-col md:flex-row gap-2">
                 <div className="relative flex-1">
                   <span className="pointer-events-none absolute inset-y-0 left-0 grid w-10 place-items-center text-ink/60">
                     <FiImage />
@@ -325,7 +325,7 @@ export default function CreateProductPage() {
                 <button
                   type="button"
                   onClick={addImage}
-                  className="inline-flex items-center gap-2 rounded-xl bg-verdant px-4 py-3 text-mist hover:bg-verdant/90"
+                  className="inline-flex lg:mt-0 mt-4 items-center gap-2 rounded-xl bg-verdant px-4 py-3 text-mist hover:bg-verdant/90"
                 >
                   <FiPlus />
                   Add

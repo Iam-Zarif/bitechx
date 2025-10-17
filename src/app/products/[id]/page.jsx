@@ -109,7 +109,7 @@ export default function ProductDetailsPage() {
             className="inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-mist px-3 py-2 hover:bg-mist/80 cursor-pointer"
           >
             <FiChevronLeft />
-            Back to products
+            Back
           </button>
 
           {product && (

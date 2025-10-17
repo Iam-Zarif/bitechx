@@ -1,4 +1,5 @@
 "use client";
+import logo from "../../public/logo.png";
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiMail, FiCheck, FiAlertCircle } from "react-icons/fi";
@@ -6,6 +7,7 @@ import { useAuthLoginMutation } from "@/store/productsApi";
 import { useAppDispatch } from "@/store/hooks";
 import { setSession } from "@/store/sessionSlice";
 import useTitle from "@/hooks/useTitle";
+import Image from "next/image";
 
 export default function Home() {
   useTitle("Login - Inventra")
@@ -56,20 +58,16 @@ export default function Home() {
       : "bg-verdant text-mist";
 
   return (
-    <main className="min-h-screen bg-mist text-ink grid place-items-center p-6">
+    <main className="lg:min-h-screen lg:pt-0 pt-[8rem] bg-mist text-ink grid place-items-center lg:p-6">
       <div className="w-full max-w-md">
-        <div className="relative rounded-3xl bg-mist text-ink shadow-[0_10px_30px_rgba(0,0,0,0.08)] ring-1 ring-ink/10">
-          <div className="p-8">
+        <div className="relative lg:rounded-3xl lg:bg-mist text-ink slg:hadow-[0_10px_30px_rgba(0,0,0,0.08)] lg:ring-1 lg:ring-ink/10">
+          <div className="lg:p-8 px-4">
             <div className="mb-6 flex items-center justify-between">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Inventra
-              </h1>
-              <span className="inline-flex items-center gap-2 rounded-full bg-verdant/10 px-3 py-1 text-xs text-verdant">
-                Secure Login
-              </span>
+           <Image src={logo} alt="logo" className="w-[5rem] rounded-[80%] mx-auto" ></Image>
+              
             </div>
 
-            <form onSubmit={onSubmit} className="space-y-5" noValidate>
+            <form onSubmit={onSubmit} className="space-y-5 pt-5 lg:pt-8" noValidate>
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm">
                   Email
