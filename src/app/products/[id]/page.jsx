@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import axios from "axios";
 import Link from "next/link";
 import {
@@ -183,9 +184,11 @@ export default function ProductDetailsPage() {
                   </span>
                 </div>
 
-                <p className="text-ink/70 leading-relaxed">
-                  {product.description || "No description provided."}
-                </p>
+                <div className="prose prose-invert max-w-none">
+                  <ReactMarkdown>
+                    {product.description || "No description provided."}
+                  </ReactMarkdown>
+                </div>
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-lg bg-mist/70 p-3 ring-1 ring-ink/10">
