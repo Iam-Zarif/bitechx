@@ -1,5 +1,6 @@
 # BiTechX — Notes for Reviewers
 
+* **Apis Checked Through Postman**
 * **Frontend-only** assignment using BiTechX mock APIs.
 * **Auth:** simple email login → `POST /auth`, token stored (Redux + localStorage).
 * **Protected routes:** current client guard; when **profile API** is available I’ll add stronger protection (middleware/server checks).
